@@ -1,23 +1,30 @@
-# Core dependencies
-torch>=2.0.0
-transformers>=4.30.0
-datasets>=2.14.0
-accelerate>=0.20.0
-sentencepiece>=0.1.99
+# Python 3.11+ Compatible Dependencies
+# Tested on Python 3.11.x
+
+# Core ML dependencies
+torch>=2.0.0,<2.5.0
+transformers>=4.30.0,<4.50.0
+datasets>=2.14.0,<3.0.0
+accelerate>=0.20.0,<1.0.0
+sentencepiece>=0.1.99,<0.3.0
 
 # FastAPI and server
-fastapi>=0.100.0
-uvicorn[standard]>=0.23.0
-pydantic>=2.0.0
-python-multipart>=0.0.6
+fastapi>=0.100.0,<0.120.0
+uvicorn[standard]>=0.23.0,<0.35.0
+pydantic>=2.0.0,<3.0.0
+python-multipart>=0.0.6,<0.1.0
 
 # Training and evaluation
-evaluate>=0.4.0
-sacrebleu>=2.3.0
-tensorboard>=2.13.0
+evaluate>=0.4.0,<0.5.0
+sacrebleu>=2.3.0,<3.0.0
+tensorboard>=2.13.0,<3.0.0
 
 # Utilities
-numpy>=1.24.0
-pandas>=2.0.0
-tqdm>=4.65.0
-python-dotenv>=1.0.0
+numpy>=1.24.0,<2.0.0
+pandas>=2.0.0,<3.0.0
+tqdm>=4.65.0,<5.0.0
+python-dotenv>=1.0.0,<2.0.0
+
+# Optional: For better performance
+# protobuf>=3.20.0,<5.0.0
+# huggingface-hub>=0.16.0,<1.0.0
