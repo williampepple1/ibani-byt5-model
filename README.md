@@ -1,23 +1,16 @@
-# Ibani-English Translation with ByT5
+# Ibani Translator 🌍
 
-A production-ready translation system for Ibani and English languages using Google's ByT5 (Byte-level T5) model, served via FastAPI and containerized with Docker.
+A neural machine translation system for English to Ibani language using Hugging Face transformers.
 
-## 🌟 Features
+## Features
 
-- **ByT5 Model**: Byte-level tokenization preserves Ibani's unique characters (á, ḅ, etc.)
-- **Bidirectional Translation**: English ↔ Ibani
-- **FastAPI Backend**: High-performance REST API
-- **Docker Support**: Easy deployment with containerization
-- **Batch Processing**: Translate multiple texts efficiently
-- **GPU Support**: Optimized for CUDA acceleration
+- **Neural Translation**: Fine-tuned ByT5 model for English to Ibani translation
+- **REST API**: FastAPI service with interactive documentation
+- **Training Pipeline**: Train custom models on your own Ibani data
+- **Batch Translation**: Translate multiple texts efficiently
+- **Model Hosting**: Ready for deployment to Hugging Face Hub
 
-## 📋 Prerequisites
-
-- Python 3.11+
-- Docker (optional, for containerized deployment)
-- CUDA-capable GPU (optional, for faster training/inference)
-
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Install Dependencies
 
@@ -25,210 +18,323 @@ A production-ready translation system for Ibani and English languages using Goog
 pip install -r requirements.txt
 ```
 
+### 2. Start API Server
+
+```bash
+python api_server.py
+```
+
+The server will start at `http://localhost:8080`
+
+Visit `http://localhost:8080/docs` for interactive API documentation.
+
+### 3. Use the API Client
+
+```bash
+python api_client.py
+```
+
+## Project Structure
+
+```
+ibani-translator/
+├── api_server.py               # FastAPI server
+├── api_client.py               # API client with examples
+├── API_USAGE.md               # Comprehensive API documentation
+├── huggingface_translator.py  # Neural translation core
+├── rule_based_translator.py   # Grammar rules and fallback
+├── train_from_ibani_eng.py    # Model training script
+├── ibani_dict.json            # Ibani-English dictionary
+├── ibani_eng.json             # Training data source
+├── ibani_eng.csv              # Training data (CSV format)
+├── ibani_eng_training_data.json # Formatted training data
+├── ibani_model/               # Trained model files
+├── requirements.txt           # Python dependencies
+└── README.md                  # This file
+```
+
+## Usage
+
+### API Translation
+
+#### Single Translation
+```bash
+curl -X POST "http://localhost:8080/translate" \
+     -H "Content-Type: application/json" \
+     -d '{"text": "I am eating fish"}'
+```
+
+**Response:**
+```json
+{
+    "source": "I am eating fish",
+    "translation": "A nji fịarị",
+    "model": "ibani-translator"
+}
+```
+
+#### Batch Translation
+```bash
+curl -X POST "http://localhost:8080/batch-translate" \
+     -H "Content-Type: application/json" \
+     -d '{"texts": ["Good morning", "Thank you", "I love you"]}'
+```
+
+### Python Usage
+
+```python
+from huggingface_translator import IbaniHuggingFaceTranslator
+
+# Load trained model
+translator = IbaniHuggingFaceTranslator(model_path="./ibani_model")
+
+# Translate
+result = translator.translate("I am eating fish")
+print(result)
+```
+
+### API Client Usage
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8080/translate",
+    json={"text": "I am eating fish"}
+)
+
+result = response.json()
+print(f"Translation: {result['translation']}")
+```
+
+## Training Custom Model
+
+### 1. Prepare Your Data
+
+Your data should be in JSON format with English and Ibani parallel texts:
+
+```json
+[
+  {
+    "english_text": "I am eating fish",
+    "ibani_text": "A nji fịarị"
+  },
+  {
+    "english_text": "my father is joseph",
+    "ibani_text": "i daa ma anịị Josef"
+  }
+]
+```
+
 ### 2. Train the Model
 
 ```bash
-python train.py
+python train_from_ibani_eng.py
 ```
 
 This will:
-- Load the `ibani_eng_training_data.json` dataset
-- Fine-tune the ByT5 model
-- Save the trained model to `models/ibani-byt5-finetuned/`
-- Generate training metrics and logs
+1. Extract training data from `ibani_eng.json`
+2. Train the ByT5 model
+3. Save the trained model to `./ibani_model`
+4. Test the model with sample translations
 
-**Training Configuration:**
-- Model: `google/byt5-small` (can be changed to `byt5-base` or `byt5-large`)
-- Epochs: 10
-- Batch Size: 8
-- Learning Rate: 5e-5
-- Evaluation: BLEU score
+### 3. Customize Training
 
-### 3. Run the API Server
+Edit `train_from_ibani_eng.py` to adjust:
+- `num_epochs`: Number of training epochs (default: 5)
+- `batch_size`: Training batch size (default: 4)
+- `learning_rate`: Learning rate (default: 5e-5)
 
-```bash
-uvicorn app:app --host 0.0.0.0 --port 8000
-```
+## API Endpoints
 
-Or simply:
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | API information |
+| `/health` | GET | Health check and model status |
+| `/translate` | POST | Translate single text |
+| `/batch-translate` | POST | Translate multiple texts |
+| `/docs` | GET | Interactive API documentation |
 
-```bash
-python app.py
-```
+For detailed API documentation, see [API_USAGE.md](API_USAGE.md)
 
-The API will be available at `http://localhost:8000`
+## Model Information
 
-### 4. Access the API Documentation
+- **Base Model**: google/byt5-small
+- **Task**: English → Ibani Translation
+- **Framework**: Hugging Face Transformers (ByT5)
+- **Model Type**: Character-level sequence-to-sequence
+- **Model Size**: ~582 MB (byt5-small)
+- **Training Data**: Parallel English-Ibani sentence pairs
+- **Special Features**: Byte-level tokenization preserves Ibani special characters (á, ḅ, etc.)
 
-Open your browser and navigate to:
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+## Deployment
 
-## 🐳 Docker Deployment
+### Model Loading Strategy
 
-### Build and Run with Docker
+The application intelligently loads models in this order:
 
-```bash
-# Build the image
-docker build -t ibani-translator .
+1. **Local Model** (`./ibani_model`) - Used for local development
+2. **HuggingFace Hub** - Automatically downloads if local model not found
+3. **Base Model** - Falls back to google/byt5-small if all else fails
 
-# Run the container
-docker run -p 8000:8000 -v $(pwd)/models:/app/models ibani-translator
-```
-
-### Using Docker Compose
-
-```bash
-# Start the service
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop the service
-docker-compose down
-```
-
-## 📡 API Endpoints
-
-### Health Check
-```bash
-GET /health
-```
-
-### Single Translation
-```bash
-POST /translate
-Content-Type: application/json
-
-{
-  "text": "Hello, how are you?",
-  "source_lang": "en",
-  "target_lang": "ibani",
-  "max_length": 256,
-  "num_beams": 4
-}
-```
-
-### Batch Translation
-```bash
-POST /batch-translate
-Content-Type: application/json
-
-{
-  "texts": [
-    "Hello",
-    "Good morning",
-    "Thank you"
-  ],
-  "source_lang": "en",
-  "target_lang": "ibani",
-  "max_length": 256,
-  "num_beams": 4
-}
-```
-
-## 🔧 Configuration
-
-### Training Configuration
-
-Edit `train.py` to modify training parameters:
-
-```python
-@dataclass
-class TrainingConfig:
-    model_name: str = "google/byt5-small"  # or byt5-base, byt5-large
-    num_train_epochs: int = 10
-    per_device_train_batch_size: int = 8
-    learning_rate: float = 5e-5
-    max_source_length: int = 256
-    max_target_length: int = 256
-```
+This allows you to:
+- Develop locally with your trained model
+- Deploy to cloud platforms without uploading large model files
+- Models are automatically cached after first download
 
 ### Environment Variables
 
-Create a `.env` file:
+```bash
+# HuggingFace Model Repository (used when local model is not found)
+HF_MODEL_REPO=williampepple1/ibani-translator
+
+# Local Model Path (for local development)
+LOCAL_MODEL_PATH=./ibani_model
+
+# Optional: HuggingFace Token (for private models)
+# HF_TOKEN=your_token_here
+```
+
+### Deploy to Vercel (Recommended)
+
+**Quick Deploy:**
+
+1. Push your code to GitHub
+2. Import project in Vercel dashboard
+3. Set environment variable:
+   - `HF_MODEL_REPO` = `williampepple1/ibani-translator`
+4. Deploy!
+
+The model will be automatically loaded from HuggingFace Hub on Vercel.
+
+**For detailed instructions, see [DEPLOYMENT.md](DEPLOYMENT.md)**
+
+### Deploy to Other Platforms
+
+#### Render / Railway / Heroku
 
 ```bash
-MODEL_PATH=models/ibani-byt5-finetuned
-MAX_LENGTH=256
-BATCH_SIZE=8
-DEVICE=cuda
+# Set environment variable
+HF_MODEL_REPO=williampepple1/ibani-translator
+
+# Start command
+python api_server.py
 ```
 
-## 📊 Model Performance
+#### Docker Deployment
 
-The model is evaluated using BLEU score during training. Check the training logs and `models/ibani-byt5-finetuned/final_metrics.json` for detailed metrics.
+```dockerfile
+FROM python:3.10-slim
 
-## 🎯 Why ByT5?
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
-ByT5 is ideal for Ibani translation because:
+COPY . .
 
-1. **Byte-level Tokenization**: No vocabulary limitations, handles any Unicode character
-2. **Preserves Diacritics**: Tonal marks (á, ḅ, etc.) are naturally preserved
-3. **Low-Resource Friendly**: Works well with limited training data
-4. **No Custom Tokenizer**: No need to train language-specific tokenizers
+# Set environment variables
+ENV HF_MODEL_REPO=williampepple1/ibani-translator
+ENV LOCAL_MODEL_PATH=./ibani_model
 
-## 📁 Project Structure
-
-```
-ibani-byt5-model/
-├── app.py                          # FastAPI application
-├── train.py                        # Training script
-├── requirements.txt                # Python dependencies
-├── Dockerfile                      # Docker configuration
-├── docker-compose.yml              # Docker Compose configuration
-├── .env.example                    # Environment variables template
-├── ibani_eng_training_data.json    # Training data
-├── models/                         # Trained models (generated)
-│   └── ibani-byt5-finetuned/
-├── logs/                           # Training logs (generated)
-└── README.md                       # This file
+EXPOSE 8080
+CMD ["python", "api_server.py"]
 ```
 
-## 🔬 Advanced Usage
-
-### Custom Generation Parameters
-
-```python
-# In your API request
-{
-  "text": "Your text here",
-  "source_lang": "en",
-  "target_lang": "ibani",
-  "max_length": 512,        # Longer outputs
-  "num_beams": 8,           # Better quality (slower)
-  "temperature": 0.8        # More creative (if do_sample=True)
-}
+Build and run:
+```bash
+docker build -t ibani-translator .
+docker run -p 8080:8080 \
+  -e HF_MODEL_REPO=williampepple1/ibani-translator \
+  ibani-translator
 ```
 
-### Training on Different Model Sizes
+## Dependencies
 
-```python
-# In train.py, change model_name:
-model_name: str = "google/byt5-base"   # Better quality, slower
-# or
-model_name: str = "google/byt5-large"  # Best quality, requires more GPU memory
+### Core Requirements
+
+All dependencies are listed in `requirements.txt`. Key packages include:
+
+- **Machine Learning & NLP**
+  - `transformers==4.56.2` - Hugging Face transformers
+  - `torch==2.8.0` - PyTorch for ML models
+  - `sentencepiece==0.2.1` - Tokenization
+  - `tokenizers==0.22.1` - Fast tokenizers
+  - `safetensors==0.6.2` - Safe model serialization
+  - `datasets==4.1.1` - Dataset handling
+  - `accelerate==1.10.1` - Distributed training
+
+- **Web API & Server**
+  - `fastapi==0.118.0` - Web API framework
+  - `uvicorn==0.37.0` - ASGI server
+  - `Flask==3.1.2` - Alternative web framework
+  - `starlette==0.48.0` - ASGI framework
+  - `pydantic==2.11.9` - Data validation
+
+- **Data Processing**
+  - `pandas==2.3.3` - Data manipulation
+  - `numpy==2.3.3` - Numerical computing
+  - `scikit-learn==1.7.2` - Machine learning utilities
+  - `scipy==1.16.2` - Scientific computing
+
+- **Hugging Face Integration**
+  - `huggingface-hub==0.35.3` - Model hosting and sharing
+  - `hf_transfer==0.1.9` - Fast model uploads (optional)
+
+- **Utilities**
+  - `requests==2.32.5` - HTTP client
+  - `tqdm==4.67.1` - Progress bars
+  - `PyYAML==6.0.3` - YAML support
+  - `click==8.3.0` - CLI utilities
+
+Install all dependencies with:
+```bash
+pip install -r requirements.txt
 ```
 
-## 🤝 Contributing
+## Performance
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+- **Translation Speed**: ~100-200ms per sentence (CPU)
+- **Batch Processing**: More efficient for multiple texts
+- **GPU Support**: Automatic CUDA detection for faster inference
+- **Model Cache**: First load is slower, subsequent loads are instant
 
-## 📝 License
+## Troubleshooting
 
-This project is licensed under the MIT License.
+### Common Issues
 
-## 🙏 Acknowledgments
+**Problem**: Cannot connect to API
+- **Solution**: Ensure server is running with `python api_server.py`
 
-- Google Research for the ByT5 model
-- Hugging Face for the Transformers library
-- The Ibani language community
+**Problem**: Model not found
+- **Solution**: Train the model first with `python train_from_ibani_eng.py`
 
-## 📧 Contact
+**Problem**: Out of memory during training
+- **Solution**: Reduce `batch_size` in training parameters
 
-For questions or support, please open an issue on GitHub.
+**Problem**: Slow translations
+- **Solution**: Use GPU if available, or reduce `num_beams` parameter
+
+**Problem**: Port 8080 already in use
+- **Solution**: Change port in `api_server.py`: `uvicorn.run(app, port=8081)`
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Add your improvements
+4. Test thoroughly
+5. Submit a pull request
+
+## License
+
+This project is open source. Feel free to use and modify for your Ibani language needs.
+
+## Support
+
+- Interactive API Docs: http://localhost:8080/docs
+- API Usage Guide: [API_USAGE.md](API_USAGE.md)
+- Check troubleshooting section above
 
 ---
 
-**Built with ❤️ for the Ibani language community**
+**Happy Translating! 🌍➡️🇳🇬**
